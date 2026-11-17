@@ -1,0 +1,677 @@
+{
+  "name": "checkpoint4_oriana_zapata",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "id": "d79bc3ff-a540-435c-8c7e-257773f636e5",
+      "name": "Gmail Trigger (correo entrante)",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        7840,
+        1872
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "nkd9K9jcATxStQO2",
+          "name": "Gmail account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "65a47289-e1dc-4e87-a18a-1679754d0a73",
+              "leftValue": "={{ /auto-?reply|automatic reply|out of office|undeliverable|delivery status|respuesta autom|fuera de la oficina/i.test(String($json.subject || $json.Subject || '')) || /no-?reply|do-?not-?reply|mailer-daemon|postmaster/i.test(JSON.stringify($json.from || $json.From || '')) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a97efbc6-d529-4065-8be2-cabdae588b4b",
+      "name": "1. ¿Es auto-reply?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        8096,
+        1872
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "8e029184-e4d0-41a4-9f15-ae98c1d7c8a3",
+      "name": "Ignorar auto-reply (corta el bucle)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        8368,
+        1696
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text || $json.snippet || '' }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "nombre",
+              "description": "Nombre y apellido de la persona que escribe"
+            },
+            {
+              "name": "empresa",
+              "description": "Empresa de la persona"
+            },
+            {
+              "name": "cargo",
+              "description": "Cargo o rol de la persona"
+            },
+            {
+              "name": "correo",
+              "description": "Correo electrónico de contacto si lo menciona en el texto"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bc90dfd9-c66b-48af-a96d-f399b740a222",
+      "name": "Extraer datos del lead (IA)",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.1,
+      "position": [
+        8368,
+        1920
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "ed7e5ca1-ef44-433f-a4a7-cc16e8c884a8",
+      "name": "OpenAI Mini (extractor)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        8384,
+        2144
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dfd6c9fe-61c4-4097-8ded-9ed4a1485842",
+              "name": "email",
+              "value": "={{ String($json.output?.correo || ($('Gmail Trigger (correo entrante)').item.json.from?.value?.[0]?.address || '')).trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "b21a88e5-1313-40fc-a9a9-669a0321d866",
+              "name": "nombre",
+              "value": "={{ String($json.output?.nombre || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "c4fc1e52-f585-4115-920d-794c721f50e4",
+              "name": "firstName",
+              "value": "={{ String($json.output?.nombre || '').trim().split(' ')[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "3c7efdbe-000d-42de-85c9-26d9b7238781",
+              "name": "lastName",
+              "value": "={{ String($json.output?.nombre || '').trim().split(' ').slice(1).join(' ') }}",
+              "type": "string"
+            },
+            {
+              "id": "9d2aa44d-16cb-4d60-873e-036e7c67854e",
+              "name": "empresa",
+              "value": "={{ String($json.output?.empresa || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "a503f0e4-efcf-4ccc-9313-0902a6891e24",
+              "name": "cargo",
+              "value": "={{ String($json.output?.cargo || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "7fa9e828-299f-4981-94bb-f32a0cffb561",
+              "name": "asunto",
+              "value": "={{ String($('Gmail Trigger (correo entrante)').item.json.subject || '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7946773a-e073-44a6-a9fd-b1b24678e627",
+      "name": "4. Set - limpiar payload CRM",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8640,
+        1872
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "e44820d1-77eb-43a0-9020-46f1710e32f6",
+              "leftValue": "={{ /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test($json.email) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "99a9bd46-0a29-41e6-92eb-8cb8600f9e51",
+      "name": "¿Email válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        8880,
+        1872
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "2f8c21bd-4975-4483-b0b6-bf5d88cae05d",
+      "name": "Descartar (sin email válido)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        9120,
+        1696
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "search",
+        "limit": 1,
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "email|string",
+                    "value": "={{ $json.email }}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "id": "bbc58bf1-3af1-4742-a54a-fb776288b8ad",
+      "name": "2. Look up contacto (HubSpot)",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        9120,
+        1920
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "n6ankEM22mGAJlQN",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "ab0c12b8-9f3a-4586-bd4e-194b7c05b5a4",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f4086f2f-7e42-4329-8d0d-608b2396d80a",
+      "name": "¿Contacto existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        9360,
+        1920
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "update"
+      },
+      "id": "5d0bca42-4f20-4b13-a1e4-4c9dd75df750",
+      "name": "Actualizar contacto (HubSpot)",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        9600,
+        1776
+      ],
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "n6ankEM22mGAJlQN",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "email": "={{ $('4. Set - limpiar payload CRM').item.json.email }}",
+        "additionalFields": {
+          "companyName": "={{ $('4. Set - limpiar payload CRM').item.json.empresa }}",
+          "firstName": "={{ $('4. Set - limpiar payload CRM').item.json.firstName }}",
+          "jobTitle": "={{ $('4. Set - limpiar payload CRM').item.json.cargo }}",
+          "lastName": "={{ $('4. Set - limpiar payload CRM').item.json.lastName }}"
+        },
+        "options": {}
+      },
+      "id": "c3b047bf-8f0e-4abe-afd8-465f9cce97e7",
+      "name": "Crear contacto (HubSpot)",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        9600,
+        2064
+      ],
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "n6ankEM22mGAJlQN",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4ccc1781-6dc3-4aa8-a4dd-4ac0d13fb877",
+              "name": "texto",
+              "value": "={{ 'Nuevo lead: ' + $('4. Set - limpiar payload CRM').item.json.nombre + ' (' + $('4. Set - limpiar payload CRM').item.json.empresa + '), ' + $('4. Set - limpiar payload CRM').item.json.cargo + '. Correo: ' + $('4. Set - limpiar payload CRM').item.json.email + '. Asunto: ' + $('4. Set - limpiar payload CRM').item.json.asunto }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "409f4a9b-d052-4267-a36a-fca83f8b756f",
+      "name": "4b. Set - limpiar payload Slack",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        9840,
+        1920
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "U0BFRGGASN9",
+          "mode": "list",
+          "cachedResultName": "Oriana Zapata (@orimzapata)"
+        },
+        "text": "={{ $json.texto }}",
+        "otherOptions": {}
+      },
+      "id": "fcff225e-145a-4d86-8e00-81f2945d43e0",
+      "name": "Avisar al equipo (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        10080,
+        1920
+      ],
+      "webhookId": "b91f5ecd-ddc7-4a13-bf8e-3dcffd6e9705",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "ek9oyCDhqn1hpj8O",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Persona interesada: ' + $('4. Set - limpiar payload CRM').item.json.nombre + ' de ' + $('4. Set - limpiar payload CRM').item.json.empresa + ' (' + $('4. Set - limpiar payload CRM').item.json.cargo + '). Asunto de su correo: ' + $('4. Set - limpiar payload CRM').item.json.asunto }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Redactá un borrador de respuesta breve, cordial y profesional, en español formal y neutro, para una persona interesada en los servicios de Nexo Soluciones. Agradecé el contacto y avisá que un integrante del equipo comercial se comunicará a la brevedad. No prometas precios, descuentos ni plazos. Máximo 90 palabras. Devolvé solo el cuerpo del correo en texto plano."
+            }
+          ]
+        }
+      },
+      "id": "c563be70-76d0-4eab-b22c-306a72c4a4ba",
+      "name": "Redactar borrador (IA)",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        10320,
+        1920
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list"
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "b5b02d94-f768-4a58-b75a-4e2da332ab33",
+      "name": "OpenAI Mini (borrador)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        10336,
+        2144
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ 'Re: ' + $('4. Set - limpiar payload CRM').item.json.asunto }}",
+        "message": "={{ $json.text }}",
+        "options": {
+          "sendTo": "={{ $('4. Set - limpiar payload CRM').item.json.email }}"
+        }
+      },
+      "id": "1dbc676b-3146-46a4-8203-594c068bbfc0",
+      "name": "3. Crear borrador (Gmail Create Draft - HITL)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        10576,
+        1920
+      ],
+      "webhookId": "4201ffe3-56a5-485c-a18c-bffeef4a807c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "nkd9K9jcATxStQO2",
+          "name": "Gmail account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger (correo entrante)": {
+      "main": [
+        [
+          {
+            "node": "1. ¿Es auto-reply?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. ¿Es auto-reply?": {
+      "main": [
+        [
+          {
+            "node": "Ignorar auto-reply (corta el bucle)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extraer datos del lead (IA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Mini (extractor)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extraer datos del lead (IA)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer datos del lead (IA)": {
+      "main": [
+        [
+          {
+            "node": "4. Set - limpiar payload CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Set - limpiar payload CRM": {
+      "main": [
+        [
+          {
+            "node": "¿Email válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Email válido?": {
+      "main": [
+        [
+          {
+            "node": "2. Look up contacto (HubSpot)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Descartar (sin email válido)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Look up contacto (HubSpot)": {
+      "main": [
+        [
+          {
+            "node": "¿Contacto existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Contacto existe?": {
+      "main": [
+        [
+          {
+            "node": "Actualizar contacto (HubSpot)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Crear contacto (HubSpot)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar contacto (HubSpot)": {
+      "main": [
+        [
+          {
+            "node": "4b. Set - limpiar payload Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear contacto (HubSpot)": {
+      "main": [
+        [
+          {
+            "node": "4b. Set - limpiar payload Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4b. Set - limpiar payload Slack": {
+      "main": [
+        [
+          {
+            "node": "Avisar al equipo (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar al equipo (Slack)": {
+      "main": [
+        [
+          {
+            "node": "Redactar borrador (IA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Mini (borrador)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Redactar borrador (IA)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redactar borrador (IA)": {
+      "main": [
+        [
+          {
+            "node": "3. Crear borrador (Gmail Create Draft - HITL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "91c6adea-4098-411a-ba48-d71ad6133b89",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "30f0fc1cbcd2aa5fb567458dd91e6652fc535e5dd2348be008fa7d5cf4a9e6fc"
+  },
+  "nodeGroups": [],
+  "id": "GXBURj3Lg0FfUTM6",
+  "tags": []
+}
